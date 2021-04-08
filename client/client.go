@@ -21,7 +21,8 @@ func main() {
 	// categoriesMenu(cl)
 	// CategoryBreadcrumb(cl)
 	// CategoriesSideMenu(cl)
-	Products(cl)
+	// Products(cl)
+	ProductsFromCategory(cl)
 }
 
 func categoriesMenu(cl EcommServiceClient) {
@@ -60,6 +61,21 @@ func Products(cl EcommServiceClient) {
 	res, err := cl.Products(context.Background(), &ProductRequest{Start: 5, Qty: 10})
 	if err != nil {
 		fmt.Printf("Error while reading the products: %v\n", err)
+	}
+	fmt.Printf("Products: %v\n", res)
+}
+
+func ProductsFromCategory(cl EcommServiceClient) {
+	// Use a valid category ID
+	id := "606e5968a77732328085941b"
+	fmt.Printf("Reading CategoryBreadcrumb with ID: %v\n", id)
+	res, err := cl.ProductsFromCategory(context.Background(), &ProductFromCategoryRequest{
+		CategoryId: id,
+		Start:      2,
+		Qty:        3,
+	})
+	if err != nil {
+		fmt.Printf("Error while reading the products from category: %v\n", err)
 	}
 	fmt.Printf("Products: %v\n", res)
 }
