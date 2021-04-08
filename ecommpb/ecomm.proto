@@ -9,18 +9,20 @@ import "google/protobuf/timestamp.proto";
 message Category {
   string id = 1;
   string name = 2;
-  string parent = 3;
-  repeated Category subcategories = 4;
-  google.protobuf.Timestamp last_updated = 5;
+  string slug = 3;
+  repeated Category ancestors = 4;
+  repeated Category childrens = 5;
+  google.protobuf.Timestamp last_updated = 6;
 }
 
 message Product {
   string id = 1;
   string name = 2;
-  int32 quantity = 3;
-  float value = 4;
-  string category = 5;
-  google.protobuf.Timestamp last_updated = 6;
+  string slug = 3;
+  int32 quantity = 4;
+  float value = 5;
+  string category = 6;
+  google.protobuf.Timestamp last_updated = 7;
 }
 
 service EcommService {};
