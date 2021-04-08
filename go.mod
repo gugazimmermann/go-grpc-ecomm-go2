@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/gosimple/slug v1.9.0
 	github.com/joho/godotenv v1.3.0
 	go.mongodb.org/mongo-driver v1.5.1
 	golang.org/x/net v0.0.0-20210331212208-0fccb6fa2b5c // indirect
