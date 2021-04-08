@@ -31,7 +31,7 @@ type MongoCategories struct {
 	Slug          string                 `bson:"slug,omitempty"`
 	Subcategories []*MongoCategories     `bson:"subcategories,omitempty"`
 	Parents       []*MongoCategories     `bson:"parents,omitempty"`
-	LastUpdated   *timestamppb.Timestamp `bson:"lastUpdated,omitempty"`
+	LastUpdated   *timestamppb.Timestamp `bson:"last_updated,omitempty"`
 }
 
 var products, categories *mongo.Collection
