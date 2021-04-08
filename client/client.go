@@ -18,7 +18,9 @@ func main() {
 	}
 	defer cc.Close()
 	cl := NewEcommServiceClient(cc)
+	categoriesMenu(cl)
 	CategoryBreadcrumb(cl)
+	CategoriesSideMenu(cl)
 }
 
 func categoriesMenu(cl EcommServiceClient) {
@@ -37,6 +39,17 @@ func CategoryBreadcrumb(cl EcommServiceClient) {
 	res, err := cl.CategoryBreadcrumb(context.Background(), &CategoryRequest{Id: id})
 	if err != nil {
 		fmt.Printf("Error while reading the categories breadcrumb: %v\n", err)
+	}
+	fmt.Printf("Categories: %v\n", res)
+}
+
+func CategoriesSideMenu(cl EcommServiceClient) {
+	// Use a valid category ID
+	id := "606e5968a777323280859418"
+	fmt.Printf("Reading CategoriesSideMenu with ID: %v\n", id)
+	res, err := cl.CategoriesSideMenu(context.Background(), &CategoryRequest{Id: id})
+	if err != nil {
+		fmt.Printf("Error while reading the categories sidemenu: %v\n", err)
 	}
 	fmt.Printf("Categories: %v\n", res)
 }

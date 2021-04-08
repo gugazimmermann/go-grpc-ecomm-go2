@@ -212,14 +212,63 @@ func (*server) CategoryBreadcrumb(ctx context.Context, req *CategoryRequest) (*C
 
 func (*server) CategoriesSideMenu(ctx context.Context, req *CategoryRequest) (*CategoriesMenuResponse, error) {
 	id := req.GetId()
-	log.Printf("CategoryBreadcrumb called with id: %v\n", id)
+	log.Printf("CategoriesSideMenu called with id: %v\n", id)
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Cannot parse ID")
+	}
+	matchStage := bson.D{E{Key: "$match", Value: bson.D{
+		E{Key: "_id", Value: oid},
+	}}}
+	graphLookupStage := bson.D{
+		E{Key: "$graphLookup", Value: bson.D{
+			E{Key: "from", Value: "categories"},
+			E{Key: "startWith", Value: "$childrens"},
+			E{Key: "connectFromField", Value: "childrens"},
+			E{Key: "connectToField", Value: "_id"},
+			E{Key: "maxDepth", Value: 0},
+			E{Key: "as", Value: "subcategories"},
+		}}}
+	cur, err := categories.Aggregate(context.Background(), mongo.Pipeline{matchStage, graphLookupStage})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Unknown Internal Error: %v", err))
+	}
+	defer cur.Close(context.Background())
+	ds := []*MongoCategories{}
+	for cur.Next(context.Background()) {
+		d := &MongoCategories{}
+		if err := cur.Decode(d); err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot decoding data: %v", err))
+		}
+		ds = append(ds, d)
+	}
+	if err = cur.Err(); err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Unknown Internal Error: %v", err))
+	}
 
+	res := []*Category{}
+	for _, d := range ds {
+		ccs := []*Category{}
+		if len(d.Subcategories) > 0 {
+			for _, cc := range d.Subcategories {
+				ec := &Category{
+					Id:   cc.ID.Hex(),
+					Name: cc.Name,
+					Slug: cc.Slug,
+				}
+				ccs = append(ccs, ec)
+			}
+		}
+		r := &Category{
+			Id:          d.ID.Hex(),
+			Name:        d.Name,
+			Slug:        d.Slug,
+			Childrens:   ccs,
+			LastUpdated: d.LastUpdated,
+		}
+		res = append(res, r)
+	}
 	return &CategoriesMenuResponse{
-		Categories: []*Category{
-			{
-				Id:   "1",
-				Name: "1",
-			},
-		},
+		Categories: res,
 	}, nil
 }
