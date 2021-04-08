@@ -22,7 +22,8 @@ func main() {
 	// CategoryBreadcrumb(cl)
 	// CategoriesSideMenu(cl)
 	// Products(cl)
-	ProductsFromCategory(cl)
+	// ProductsFromCategory(cl)
+	SearchProducts(cl)
 }
 
 func categoriesMenu(cl EcommServiceClient) {
@@ -76,6 +77,21 @@ func ProductsFromCategory(cl EcommServiceClient) {
 	})
 	if err != nil {
 		fmt.Printf("Error while reading the products from category: %v\n", err)
+	}
+	fmt.Printf("Products: %v\n", res)
+}
+
+func SearchProducts(cl EcommServiceClient) {
+	// Use part of a product name
+	name := "drag"
+	fmt.Printf("Reading SearchProducts with Name: %v\n", name)
+	res, err := cl.SearchProducts(context.Background(), &SearchProductsRequest{
+		Name:  name,
+		Start: 0,
+		Qty:   20,
+	})
+	if err != nil {
+		fmt.Printf("Error while reading the search products: %v\n", err)
 	}
 	fmt.Printf("Products: %v\n", res)
 }

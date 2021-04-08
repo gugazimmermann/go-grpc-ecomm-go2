@@ -419,17 +419,57 @@ func (*server) SearchProducts(ctx context.Context, req *SearchProductsRequest) (
 	start := req.GetStart()
 	qty := req.GetQty()
 	log.Printf("SearchProducts called with Name: %v | start: %v | qty: %v\n", name, start, qty)
-	return &ProductsResponse{
-		Total: 0,
-		Data: []*Product{
-			{
-				Id:       "1",
-				Name:     "-",
-				Slug:     "-",
-				Quantity: 0,
-				Value:    1.00,
-				Category: &Category{},
+	matchStage := bson.D{E{Key: "$match", Value: bson.D{
+		E{Key: "name", Value: Regex{Pattern: name, Options: "i"}},
+	}}}
+	sortStage := bson.D{E{Key: "$sort", Value: bson.D{E{Key: "name", Value: 1}}}}
+	graphLookupStage := bson.D{
+		E{Key: "$graphLookup", Value: bson.D{
+			E{Key: "from", Value: "categories"},
+			E{Key: "startWith", Value: "$category"},
+			E{Key: "connectFromField", Value: "category"},
+			E{Key: "connectToField", Value: "_id"},
+			E{Key: "maxDepth", Value: 0},
+			E{Key: "as", Value: "cat"},
+		}}}
+	facetStage := bson.D{
+		E{Key: "$facet", Value: bson.D{
+			E{Key: "metadata", Value: []bson.D{{E{Key: "$count", Value: "total"}}}},
+			E{Key: "data", Value: []bson.D{{E{Key: "$skip", Value: start}}, {E{Key: "$limit", Value: qty}}}},
+		}},
+	}
+	cur, err := products.Aggregate(context.Background(), mongo.Pipeline{matchStage, graphLookupStage, sortStage, facetStage})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Unknown Internal Error: %v", err))
+	}
+	d := &MongoProducts{}
+	defer cur.Close(context.Background())
+	for cur.Next(context.Background()) {
+		if err := cur.Decode(d); err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot decoding data: %v", err))
+		}
+	}
+	if err = cur.Err(); err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Unknown Internal Error: %v", err))
+	}
+	data := []*Product{}
+	for _, p := range d.Data {
+		data = append(data, &Product{
+			Id:       p.ID.Hex(),
+			Name:     p.Name,
+			Slug:     p.Slug,
+			Quantity: p.Quantity,
+			Value:    float32(math.Ceil(p.Value*100) / 100),
+			Category: &Category{
+				Id:   p.Cat[0].ID.Hex(),
+				Name: p.Cat[0].Name,
+				Slug: p.Cat[0].Slug,
 			},
-		},
+			LastUpdated: p.LastUpdated,
+		})
+	}
+	return &ProductsResponse{
+		Total: d.Metadata[0].Total,
+		Data:  data,
 	}, nil
 }
