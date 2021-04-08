@@ -6,11 +6,13 @@ import (
 	"log"
 	"math"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
 	. "github.com/gugazimmermann/go-grpc-ecomm-go/ecommpb/ecommpb"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,12 +21,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type server struct{}
+
+type grpcMultiplexer struct {
+	*grpcweb.WrappedGrpcServer
+}
 
 type MongoCategories struct {
 	ID            ObjectID               `bson:"_id,omitempty"`
@@ -86,8 +93,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	opts := []grpc.ServerOption{}
-	s := grpc.NewServer(opts...)
+	s, err := GenerateTLSApi("certs/server.crt", "certs/server.key")
+	if err != nil {
+		log.Fatalf("Failed to generate TLS api: %v", err)
+	}
 	RegisterEcommServiceServer(s, &server{})
 
 	go func() {
@@ -97,10 +106,28 @@ func main() {
 		}
 	}()
 
+	w := grpcweb.WrapServer(s)
+	m := grpcMultiplexer{w}
+	r := http.NewServeMux()
+	f := http.FileServer(http.Dir("frontend/build"))
+	r.Handle("/", m.Handler(f))
+	log.Println("Starting HTTP Server...")
+	h := &http.Server{
+		Handler:      r,
+		Addr:         "localhost:8080",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	if err := h.ListenAndServeTLS("certs/server.crt", "certs/server.key"); err != nil {
+		log.Fatalf("Failed to listen TCP and call ServeTLS: %v", err)
+	}
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 
 	<-ch
+	log.Println("Stopping Ecomm Server...")
+	h.Close()
 	log.Println("Stopping Ecomm Server...")
 	s.Stop()
 	log.Println("Closing Listener...")
@@ -108,6 +135,27 @@ func main() {
 	log.Println("Closing MongoDB...")
 	client.Disconnect(mongoCtx)
 	log.Println("All done!")
+}
+
+func GenerateTLSApi(p, k string) (*grpc.Server, error) {
+	c, err := credentials.NewServerTLSFromFile(p, k)
+	if err != nil {
+		return nil, err
+	}
+	s := grpc.NewServer(
+		grpc.Creds(c),
+	)
+	return s, nil
+}
+
+func (m *grpcMultiplexer) Handler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if m.IsGrpcWebRequest(r) {
+			m.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (*server) CategoriesMenu(ctx context.Context, req *emptypb.Empty) (*CategoriesMenuResponse, error) {
@@ -455,16 +503,12 @@ func (*server) SearchProducts(ctx context.Context, req *SearchProductsRequest) (
 	data := []*Product{}
 	for _, p := range d.Data {
 		data = append(data, &Product{
-			Id:       p.ID.Hex(),
-			Name:     p.Name,
-			Slug:     p.Slug,
-			Quantity: p.Quantity,
-			Value:    float32(math.Ceil(p.Value*100) / 100),
-			Category: &Category{
-				Id:   p.Cat[0].ID.Hex(),
-				Name: p.Cat[0].Name,
-				Slug: p.Cat[0].Slug,
-			},
+			Id:          p.ID.Hex(),
+			Name:        p.Name,
+			Slug:        p.Slug,
+			Quantity:    p.Quantity,
+			Value:       float32(math.Ceil(p.Value*100) / 100),
+			Category:    &Category{Id: p.Cat[0].ID.Hex(), Name: p.Cat[0].Name, Slug: p.Cat[0].Slug},
 			LastUpdated: p.LastUpdated,
 		})
 	}
