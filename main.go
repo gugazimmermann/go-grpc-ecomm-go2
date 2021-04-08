@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	. "github.com/gugazimmermann/go-grpc-ecomm-go/ecommpb/ecommpb"
@@ -150,7 +151,7 @@ func GenerateTLSApi(p, k string) (*grpc.Server, error) {
 
 func (m *grpcMultiplexer) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if m.IsGrpcWebRequest(r) {
+		if strings.Contains(r.Header.Get("content-type"), "application/grpc") {
 			m.ServeHTTP(w, r)
 			return
 		}
