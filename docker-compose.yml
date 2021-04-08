@@ -35,6 +35,14 @@ services:
     networks:
       - go-grpc-ecomm
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+    ports:
+      - 8082:8080
+
 networks:
   go-grpc-ecomm:
     driver: bridge
