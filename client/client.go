@@ -18,9 +18,10 @@ func main() {
 	}
 	defer cc.Close()
 	cl := NewEcommServiceClient(cc)
-	categoriesMenu(cl)
-	CategoryBreadcrumb(cl)
-	CategoriesSideMenu(cl)
+	// categoriesMenu(cl)
+	// CategoryBreadcrumb(cl)
+	// CategoriesSideMenu(cl)
+	Products(cl)
 }
 
 func categoriesMenu(cl EcommServiceClient) {
@@ -52,4 +53,13 @@ func CategoriesSideMenu(cl EcommServiceClient) {
 		fmt.Printf("Error while reading the categories sidemenu: %v\n", err)
 	}
 	fmt.Printf("Categories: %v\n", res)
+}
+
+func Products(cl EcommServiceClient) {
+	fmt.Println("Reading Products")
+	res, err := cl.Products(context.Background(), &ProductRequest{Start: 5, Qty: 10})
+	if err != nil {
+		fmt.Printf("Error while reading the products: %v\n", err)
+	}
+	fmt.Printf("Products: %v\n", res)
 }
