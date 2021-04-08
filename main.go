@@ -12,6 +12,7 @@ import (
 	. "github.com/gugazimmermann/go-grpc-ecomm-go/ecommpb/ecommpb"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	. "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,6 +30,7 @@ type MongoCategories struct {
 	Name          string                 `bson:"name,omitempty"`
 	Slug          string                 `bson:"slug,omitempty"`
 	Subcategories []*MongoCategories     `bson:"subcategories,omitempty"`
+	Parents       []*MongoCategories     `bson:"parents,omitempty"`
 	LastUpdated   *timestamppb.Timestamp `bson:"lastUpdated,omitempty"`
 }
 
@@ -148,14 +150,63 @@ func (*server) CategoriesMenu(ctx context.Context, req *emptypb.Empty) (*Categor
 func (*server) CategoryBreadcrumb(ctx context.Context, req *CategoryRequest) (*CategoriesMenuResponse, error) {
 	id := req.GetId()
 	log.Printf("CategoryBreadcrumb called with id: %v\n", id)
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Cannot parse ID")
+	}
+	matchStage := bson.D{E{Key: "$match", Value: bson.D{
+		E{Key: "_id", Value: oid},
+	}}}
+	graphLookupStage := bson.D{
+		E{Key: "$graphLookup", Value: bson.D{
+			E{Key: "from", Value: "categories"},
+			E{Key: "startWith", Value: "$ancestors"},
+			E{Key: "connectFromField", Value: "ancestors"},
+			E{Key: "connectToField", Value: "_id"},
+			E{Key: "maxDepth", Value: 0},
+			E{Key: "as", Value: "parents"},
+		}}}
+	cur, err := categories.Aggregate(context.Background(), mongo.Pipeline{matchStage, graphLookupStage})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Unknown Internal Error: %v", err))
+	}
+	defer cur.Close(context.Background())
+	ds := []*MongoCategories{}
+	for cur.Next(context.Background()) {
+		d := &MongoCategories{}
+		if err := cur.Decode(d); err != nil {
+			return nil, status.Errorf(codes.Internal, fmt.Sprintf("Cannot decoding data: %v", err))
+		}
+		ds = append(ds, d)
+	}
+	if err = cur.Err(); err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Unknown Internal Error: %v", err))
+	}
 
+	res := []*Category{}
+	for _, d := range ds {
+		cps := []*Category{}
+		if len(d.Parents) > 0 {
+			for _, cp := range d.Parents {
+				ec := &Category{
+					Id:   cp.ID.Hex(),
+					Name: cp.Name,
+					Slug: cp.Slug,
+				}
+				cps = append(cps, ec)
+			}
+		}
+		r := &Category{
+			Id:          d.ID.Hex(),
+			Name:        d.Name,
+			Slug:        d.Slug,
+			Ancestors:   cps,
+			LastUpdated: d.LastUpdated,
+		}
+		res = append(res, r)
+	}
 	return &CategoriesMenuResponse{
-		Categories: []*Category{
-			{
-				Id:   "1",
-				Name: "1",
-			},
-		},
+		Categories: res,
 	}, nil
 }
 
