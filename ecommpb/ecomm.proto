@@ -20,10 +20,11 @@ message Product {
   string id = 1;
   string name = 2;
   string slug = 3;
-  int32 quantity = 4;
-  float value = 5;
-  Category category = 6;
-  google.protobuf.Timestamp last_updated = 7;
+  string image = 4;
+  int32 quantity = 5;
+  float value = 6;
+  Category category = 7;
+  google.protobuf.Timestamp last_updated = 8;
 }
 
 message CategoryRequest { string slug = 1; }
@@ -53,6 +54,7 @@ service EcommService {
   rpc CategoryBreadcrumb(CategoryRequest) returns (CategoriesMenuResponse) {};
   rpc CategoriesSideMenu(CategoryRequest) returns (CategoriesMenuResponse) {};
   rpc Products(ProductRequest) returns (ProductsResponse) {};
-  rpc ProductsFromCategory(ProductFromCategoryRequest) returns (ProductsResponse) {};
+  rpc ProductsFromCategory(ProductFromCategoryRequest)
+      returns (ProductsResponse) {};
   rpc SearchProducts(SearchProductsRequest) returns (ProductsResponse) {};
 }
