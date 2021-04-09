@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/gosimple/slug"
@@ -64,6 +65,7 @@ type MongoCategory struct {
 type FlatProduct struct {
 	Name        string
 	Slug        string
+	Image       string
 	Quantity    int
 	Value       float64
 	Category    primitive.ObjectID
@@ -290,6 +292,7 @@ func getFlatProducts(s *SampleData, m []*MongoCategory) []*FlatProduct {
 		fp := &FlatProduct{
 			Name:     p.Name,
 			Slug:     slug.Make(p.Name),
+			Image:    strconv.Itoa(p.Id) + ".jpg",
 			Quantity: p.Quantity,
 			Value:    math.Ceil(p.Value*100) / 100,
 		}
