@@ -36,10 +36,10 @@ func categoriesMenu(cl EcommServiceClient) {
 }
 
 func CategoryBreadcrumb(cl EcommServiceClient) {
-	// Use a valid category ID
-	id := "606e5968a77732328085941d"
-	fmt.Printf("Reading CategoryBreadcrumb with ID: %v\n", id)
-	res, err := cl.CategoryBreadcrumb(context.Background(), &CategoryRequest{Id: id})
+	// Use a valid category SLUG
+	slug := "world-of-darkness"
+	fmt.Printf("Reading CategoryBreadcrumb with slug: %v\n", slug)
+	res, err := cl.CategoryBreadcrumb(context.Background(), &CategoryRequest{Slug: slug})
 	if err != nil {
 		fmt.Printf("Error while reading the categories breadcrumb: %v\n", err)
 	}
@@ -47,10 +47,10 @@ func CategoryBreadcrumb(cl EcommServiceClient) {
 }
 
 func CategoriesSideMenu(cl EcommServiceClient) {
-	// Use a valid category ID
-	id := "606e5968a777323280859418"
-	fmt.Printf("Reading CategoriesSideMenu with ID: %v\n", id)
-	res, err := cl.CategoriesSideMenu(context.Background(), &CategoryRequest{Id: id})
+	// Use a valid category SLUG
+	slug := "world-of-darkness"
+	fmt.Printf("Reading CategoriesSideMenu with slug: %v\n", slug)
+	res, err := cl.CategoriesSideMenu(context.Background(), &CategoryRequest{Slug: slug})
 	if err != nil {
 		fmt.Printf("Error while reading the categories sidemenu: %v\n", err)
 	}

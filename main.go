@@ -218,14 +218,10 @@ func (*server) CategoriesMenu(ctx context.Context, req *emptypb.Empty) (*Categor
 }
 
 func (*server) CategoryBreadcrumb(ctx context.Context, req *CategoryRequest) (*CategoriesMenuResponse, error) {
-	id := req.GetId()
-	log.Printf("CategoryBreadcrumb called with id: %v\n", id)
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Cannot parse ID")
-	}
+	s := req.GetSlug()
+	log.Printf("CategoryBreadcrumb called with slug: %v\n", s)
 	matchStage := bson.D{E{Key: "$match", Value: bson.D{
-		E{Key: "_id", Value: oid},
+		E{Key: "slug", Value: s},
 	}}}
 	graphLookupStage := bson.D{
 		E{Key: "$graphLookup", Value: bson.D{
@@ -281,14 +277,10 @@ func (*server) CategoryBreadcrumb(ctx context.Context, req *CategoryRequest) (*C
 }
 
 func (*server) CategoriesSideMenu(ctx context.Context, req *CategoryRequest) (*CategoriesMenuResponse, error) {
-	id := req.GetId()
-	log.Printf("CategoriesSideMenu called with id: %v\n", id)
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Cannot parse ID")
-	}
+	s := req.GetSlug()
+	log.Printf("CategoriesSideMenu called with slug: %v\n", s)
 	matchStage := bson.D{E{Key: "$match", Value: bson.D{
-		E{Key: "_id", Value: oid},
+		E{Key: "slug", Value: s},
 	}}}
 	graphLookupStage := bson.D{
 		E{Key: "$graphLookup", Value: bson.D{
