@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"time"
 
@@ -152,9 +153,19 @@ func GenerateTLSApi(p, k string) (*grpc.Server, error) {
 
 func (m *grpcMultiplexer) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.URL.Path)
 		if strings.Contains(r.Header.Get("content-type"), "application/grpc") {
 			m.ServeHTTP(w, r)
 			return
+		} else if r.URL.Path != "/" {
+			fullPath := "frontend/build/" + strings.TrimPrefix(path.Clean(r.URL.Path), "/")
+			_, err := os.Stat(fullPath)
+			if err != nil {
+				if !os.IsNotExist(err) {
+					log.Printf("Path error %v\n", err)
+				}
+				r.URL.Path = "/"
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
