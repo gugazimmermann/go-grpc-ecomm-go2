@@ -445,8 +445,6 @@ func (*server) ProductsFromCategory(ctx context.Context, req *ProductFromCategor
 		return nil, status.Errorf(codes.InvalidArgument, "Cannot parse ID")
 	}
 	cats := seeProductCategories(oid)
-	fmt.Println(cats)
-
 	search := bson.D{}
 	if len(cats) > 0 {
 		arr := []bson.D{}
@@ -458,7 +456,6 @@ func (*server) ProductsFromCategory(ctx context.Context, req *ProductFromCategor
 		search = bson.D{E{Key: "category", Value: oid}}
 	}
 	matchStage := bson.D{E{Key: "$match", Value: search}}
-	fmt.Println(matchStage)
 	sortStage := bson.D{E{Key: "$sort", Value: bson.D{E{Key: "name", Value: 1}}}}
 	graphLookupStage := bson.D{
 		E{Key: "$graphLookup", Value: bson.D{
